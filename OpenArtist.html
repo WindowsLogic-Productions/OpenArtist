@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenArtist</title>
+<style>
+:root {
+    --primary: #2196F3;
+    --secondary: #666;
+    --bg: #f5f5f5;
+    --toolbar: #fff;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Segoe UI, Arial, sans-serif;
+    background: var(--bg);
+}
+
+.toolbar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 60px;
+    background: var(--toolbar);
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    z-index: 100;
+}
+
+.tool {
+    width: 40px;
+    height: 40px;
+    margin: 5px;
+    border: none;
+    border-radius: 5px;
+    background: var(--bg);
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tool:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.tool.active {
+    background: var(--primary);
+    color: white;
+}
+
+.properties {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 250px;
+    background: var(--toolbar);
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    padding: 20px;
+    overflow-y: auto;
+    transition: transform 0.3s ease;
+}
+
+.properties.hidden {
+    transform: translateX(270px);
+}
+
+.toggle-properties {
+    position: absolute;
+    left: -20px;
+    top: 10px;
+    width: 20px;
+    height: 40px;
+    background: var(--toolbar);
+    border: none;
+    border-radius: 5px 0 0 5px;
+    cursor: pointer;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-properties i {
+    transition: transform 0.3s ease;
+}
+
+.properties.hidden .toggle-properties i {
+    transform: rotate(180deg);
+}
+
+.canvas-container {
+    position: fixed;
+    left: 80px;
+    right: 270px;
+    top: 0;
+    bottom: 0;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: right 0.3s ease;
+    transform-origin: center center;
+}
+
+.canvas-container.zooming {
+    cursor: zoom-in;
+}
+
+.canvas-container.expanded {
+    right: 0;
+}
+
+#canvas {
+    background: white;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.layer-panel {
+    margin-top: 20px;
+}
+
+.layer {
+    display: flex;
+    align-items: center;
+    padding: 5px;
+    background: var(--bg);
+    margin: 5px 0;
+    border-radius: 3px;
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+.layer.selected {
+    background: var(--primary);
+    color: white;
+}
+
+.layer.selected .delete-layer {
+    background: #ff6666;
+}
+
+.layer-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.delete-layer {
+    background: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.delete-layer:hover {
+    background: #cc0000;
+}
+
+.color-picker {
+    width: 100%;
+    height: 40px;
+    margin: 10px 0;
+}
+
+.size-slider {
+    width: 100%;
+    margin: 10px 0;
+}
+
+.menu-bar {
+    position: fixed;
+    top: 0;
+    left: 80px;
+    right: -9px;
+    height: 30px;
+    background: var(--toolbar);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    z-index: 99;
+}
+
+.menu-item {
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+.menu-item:hover {
+    background: var(--bg);
+}
+
+.transform-handle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: var(--primary);
+    border: 1px solid white;
+    pointer-events: all;
+}
+
+.transform-box {
+    position: absolute;
+    border: 1px solid var(--primary);
+    pointer-events: none;
+    display: none;
+}
+
+.transform-handle.nw { left: -4px; top: -4px; cursor: nw-resize; }
+.transform-handle.ne { right: -4px; top: -4px; cursor: ne-resize; }
+.transform-handle.sw { left: -4px; bottom: -4px; cursor: sw-resize; }
+.transform-handle.se { right: -4px; bottom: -4px; cursor: se-resize; }
+.text-property {
+    width: 100%;
+    margin: 5px 0;
+    padding: 5px;
+    border: 1px solid var(--secondary);
+    border-radius: 3px;
+}
+
+#textProperties {
+    margin-top: 10px;
+}
+
+/* Add to the existing CSS */
+#zoomProperties {
+    margin-top: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--secondary);
+}
+
+#zoomLevel {
+    display: inline-block;
+    margin-left: 10px;
+    color: var(--secondary);
+}
+
+/* Add this CSS for corner toggle button */
+.corner-toggle {
+    position: fixed;
+    top: 10px;
+    right: 280px;
+    z-index: 150;
+    background: var(--toolbar);
+    border: none;
+    border-radius: 5px;
+    padding: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: right 0.3s ease;
+}
+
+.corner-toggle:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.corner-toggle.expanded {
+    right: 10px;
+}
+
+/* Add to existing CSS */
+#rotationProperties {
+    margin-top: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--secondary);
+}
+
+.rotation-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.rotation-buttons button {
+    flex: 1;
+    padding: 5px;
+    border: 1px solid var(--secondary);
+    border-radius: 3px;
+    background: var(--bg);
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.rotation-buttons button:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.layer.dragging {
+    opacity: 0.5;
+    background: var(--primary);
+    color: white;
+}
+
+.layer.drag-over {
+    border-top: 2px solid var(--primary);
+}</style>
+</head>
+<body>
+    <div class="toolbar">
+        <button title="Brush Tool (B)" class="tool active" id="brush"><i class="fas fa-paint-brush"></i></button>
+        <button title="Selection Tool (V)" class="tool" id="select"><i class="fas fa-mouse-pointer"></i></button>
+        <button title="Eraser Tool (E)" class="tool" id="eraser"><i class="fas fa-eraser"></i></button>
+        <button title="Rectangle Tool (R)" class="tool" id="rectangle"><i class="fas fa-square"></i></button>
+        <button title="Circle Tool (C)" class="tool" id="circle"><i class="fas fa-circle"></i></button>
+        <button title="Line Tool (L)" class="tool" id="line"><i class="fas fa-slash"></i></button>
+        <button title="Text Tool (T)" class="tool" id="text"><i class="fas fa-font"></i></button>
+        <button title="Insert Image (I)" class="tool" id="image"><i class="fas fa-image"></i></button>
+    </div>
+
+    <div class="menu-bar">
+        <div class="menu-item" id="new" title="New (Ctrl+N)">New</div>
+        <div class="menu-item" id="open" title="Open (Ctrl+O)">Open</div>
+        <div class="menu-item" id="save" title="Save (Ctrl+S)">Save</div>
+        <div class="menu-item" id="undo" title="Undo (Ctrl+Z)">Undo</div>
+        <div class="menu-item" id="redo" title="Redo (Ctrl+Y)">Redo</div>
+    </div>
+
+    <button title="Properties" class="corner-toggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="canvas-container">
+        <canvas id="canvas" width="800" height="600"></canvas>
+    </div>
+
+    <div class="properties">
+        <button class="toggle-properties">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+      <h4>Brush Properties</h4>
+      <input title="Brush Colour" type="color" class="color-picker" id="colorPicker" value="#000000">
+        <input title="Brush Size" type="range" class="size-slider" id="sizeSlider" min="1" max="50" value="5">
+      <hr>
+        <div id="textProperties" style="display: none;">
+            <h4>Text Properties</h4>
+            <select id="fontFamily" class="text-property">
+                <option value="Arial">Arial</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Courier New">Courier New</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Verdana">Verdana</option>
+            </select>
+            <input type="number" id="fontSize" class="text-property" value="20" min="8" max="72">
+<hr>
+        </div>
+        <div id="zoomProperties">
+            <h4>Canvas Zoom</h4>
+            <input type="range" id="zoomSlider" class="size-slider" min="10" max="200" value="100">
+            <span id="zoomLevel">100%</span>
+        </div>
+
+        <!-- Add rotation properties -->
+        <div id="rotationProperties">
+            <h4>Canvas Rotation</h4>
+            <input type="range" id="rotationSlider" class="size-slider" min="0" max="360" value="0">
+            <span id="rotationLevel">0°</span>
+            <div class="rotation-buttons">
+                <button id="rotateLeft">↶ 90°</button>
+                <button id="rotateRight">↷ 90°</button>
+            </div>
+        </div>
+
+        <div class="layer-panel">
+            <h4>Layer Properties</h4>
+            <button id="addLayer">Add Layer</button>
+            <div id="layerList"></div>
+        </div>
+    </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
+<script src="OpenArtist.js"></script>
+</body>
+</html>
